@@ -3,6 +3,7 @@
 library(sf)
 library(dplyr)
 library(ggthemes)
+library(hrbrthemes)
 library(viridis)
 library(ggspatial)
 library(USAboundaries)
@@ -16,6 +17,10 @@ hd_2007 <- st_read("data/Heart_Disease_Death_Rate_per_100000_45_to_64_All_Races_
 hd_2016 <- st_read("data/Heart_Disease_Death_Rate_per_100000_45_to_64_All_Races_Ethnicities_Both_Genders_2014to2016.shp") %>% 
   st_transform(3310)
 
+pov <- st_read("data/Percentage_Living_in_Poverty_All_Ages_2016.shp") %>% 
+  st_transform(3310)
+
+
 comp_map <- albersusa::counties_sf() %>% st_transform(3310)
 st_crs(comp_map)
 
@@ -24,29 +29,82 @@ st_crs(comp_map)
 
 hd_out <- left_join(comp_map, as.data.frame(hd_2016), by=c("fips"="cnty_fips"))
 
+pov_out <- left_join(comp_map, as.data.frame(pov), by=c("fips"="cnty_fips"))
 
-# Make Plot ---------------------------------------------------------------
+# Make Plot of Heart Disease ----------------------------------------
+
+# make color palette
+# by_pal <- colorRampPalette(c("#FFF5EE", "#EEA2AD", "#F08080", "#CD0000","#8B0000"))(20)
+
+by_pal <- RColorBrewer::brewer.pal(n = 9, name = "Reds") 
 
 # Total Cardiovascular Disease Death Rate per 100,000, 45-64, All Races/Ethnicities, Both Genders, 2014-2016
 
-ggplot() +
-  geom_sf(
-    data = hd_out, aes(fill = happiness_score),
-    size = 0.125, colour = "#2b2b2b77"
-  ) +
-  scale_fill_viridis(
-    name = "Heart Disease \n Death Rate (per 100k)", option = "A") +
-  guides(fill = guide_colorbar(title.position = "top")) +
-  labs(
-    title = "Total Cardiovascular Disease Death Rate",
-    subtitle = "per 100,000 people (all genders, ages 45-64);",
-    caption = "Data source: <https://nccd.cdc.gov/DHDSPAtlas//>\n • #30DayMapChallenge"
-  ) +
-  theme_ft_rc(grid="") +
-  theme(plot.title = element_text(hjust = 0.5)) +
-  theme(plot.subtitle = element_text(hjust = 0.5)) +
-  theme(axis.text = element_blank()) +
-  theme(legend.title = element_text(hjust = 0.5)) +
-  theme(legend.key.width = unit(2, "lines")) +
-  theme(legend.position = "bottom")
+(cd_2016 <- ggplot() +
+    geom_sf(
+      data = hd_out, aes(fill = Value),
+      size = 0.125, colour = "#2b2b2b77"
+    ) +
+    scale_fill_gradientn(
+      colors = by_pal,
+      name = "Heart Disease \n Death Rate 2014-2016") +
+    guides(fill = guide_colorbar(title.position = "top")) +
+    labs(
+      title = "Total Cardiovascular \n Disease Death Rate",
+      subtitle = "per 100,000 people \n(all genders, ages 45-64)",
+      caption = "Data source: <https://nccd.cdc.gov/DHDSPAtlas/>\nhttps://github.com/ryanpeek/2019_mapping • #30DayMapChallenge"
+    ) +
+    ggdark::dark_theme_minimal(base_family = "Roboto Condensed")+
+    theme(axis.line = element_blank(),
+          axis.line.x = element_blank(),
+          axis.line.y = element_blank())+
+    theme(plot.title = element_text(hjust = 0.5)) +
+    theme(plot.subtitle = element_text(hjust = 0.5)) +
+    theme(axis.text = element_blank()) +
+    theme(legend.title = element_text(hjust = 0.5)) +
+    theme(legend.key.width = unit(2, "lines")) +
+    theme(legend.position = "bottom")
+)
 
+ggsave("figs/cardiovasc_death_2014-16_45-64_all_gender.png", width = 9.5, height = 6, dpi = 300, units = "in")
+
+
+
+# Make Plot of Poverty ----------------------------------------------------
+
+#by_pal <- RColorBrewer::brewer.pal(n = 11, name = "RdYlBu") 
+
+# now poverty
+(pov_map <- ggplot() +
+   geom_sf(
+     data = pov_out, aes(fill = Value),
+     size = 0.125, colour = "#2b2b2b77"
+   ) +
+    scale_fill_viridis(option = "B", name = "% in Poverty") +
+   guides(fill = guide_colorbar(title.position = "top")) +
+   labs(
+     title = "Percent Living in Poverty",
+     subtitle = "All Ages, 2016",
+     caption = "Data source: <https://nccd.cdc.gov/DHDSPAtlas/>\nhttps://github.com/ryanpeek/2019_mapping • #30DayMapChallenge"
+   ) +
+   ggdark::dark_theme_minimal(base_family = "Roboto Condensed") +
+   theme(axis.line = element_blank(),
+         axis.line.x = element_blank(),
+         axis.line.y = element_blank()) +
+   theme(plot.title = element_text(hjust = 0.5)) +
+   theme(plot.subtitle = element_text(hjust = 0.5)) +
+   theme(axis.text = element_blank()) +
+   theme(legend.title = element_text(hjust = 0.5)) +
+   theme(legend.key.width = unit(2, "lines")) +
+   theme(legend.position = "bottom")
+)
+
+ggsave("figs/percent_living_in_poverty_2016.png", width = 9.5, height = 6, dpi = 300, units = "in")
+
+
+# Combine -----------------------------------------------------------------
+
+library(cowplot)
+
+plots <- plot_grid(cd_2016, pov_map, nrow = 1)
+cowplot::save_plot(plots, filename = "figs/poverty_vs_heart_disease_2016.png", base_width = 11, base_height =  8.5, dpi = 300, units = "in")
