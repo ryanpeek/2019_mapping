@@ -10,8 +10,8 @@ src/*.o
 src/*.so
 src/*.dll
 
-# Output files from R CMD build
-/*.tar.gz
+# zip files
+/*.zip
 
 # RStudio files
 .Rproj.user/
