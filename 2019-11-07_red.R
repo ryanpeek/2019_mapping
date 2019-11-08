@@ -11,24 +11,60 @@ library(albersusa) #devtools::install_github('hrbrmstr/albersusa')
 
 # Get Data ----------------------------------------------------------------
 
-hd_2007 <- st_read("data/Heart_Disease_Death_Rate_per_100000_45_to_64_All_Races_Ethnicities_Both_Genders_2005to2007.shp") %>% 
-  st_transform(3310)
+# 2019-11-07: downloaded as shapefiles from https://nccd.cdc.gov/DHDSPAtlas/
 
-hd_2016 <- st_read("data/Heart_Disease_Death_Rate_per_100000_45_to_64_All_Races_Ethnicities_Both_Genders_2014to2016.shp") %>% 
-  st_transform(3310)
+# hd_2007 <- st_read("data/Heart_Disease_Death_Rate_per_100000_45_to_64_All_Races_Ethnicities_Both_Genders_2005to2007.shp") %>%
+#   st_transform(3310)
+# 
+# hd_2016 <- st_read("data/Heart_Disease_Death_Rate_per_100000_45_to_64_All_Races_Ethnicities_Both_Genders_2014to2016.shp") %>%
+#   st_transform(3310)
+# 
+# pov <- st_read("data/Percentage_Living_in_Poverty_All_Ages_2016.shp") %>%
+#   st_transform(3310)
 
-pov <- st_read("data/Percentage_Living_in_Poverty_All_Ages_2016.shp") %>% 
-  st_transform(3310)
+# from hrbrmstr/albersusa
+# comp_map <- albersusa::counties_sf() %>% st_transform(3310)
+# st_crs(comp_map)
+
+# save these data back out for pushing to git, # add delete_layer if needing to overwrite completely
+# st_write(hd_2007, dsn = "data/mapping_data_sf.gpkg", layer = "cardio_death_rate_per_100k_45_to_65_all_ethnicity_genders_2005_2007") 
+# st_write(hd_2016, dsn = "data/mapping_data_sf.gpkg", layer = "cardio_death_rate_per_100k_45_to_65_all_ethnicity_genders_2014_2016")
+# st_write(pov, dsn = "data/mapping_data_sf.gpkg", layer = "percentage_living_in_poverty_all_ages_2106")
+# 
+# st_write(comp_map, dsn = "data/mapping_data_sf.gpkg", layer = "us_counties_w_AK_HI")
 
 
+# Load Data ---------------------------------------------------------------
+
+# the data is in here:
+geoDB <- "data/mapping_data_sf.gpkg" # the geopackage
+
+# see what's in the geopackage
+st_layers(dsn = geoDB)
+
+# heart disease death rate 2005-2007
+hd_2007 <- st_read(dsn = geoDB, layer = "cardio_death_rate_per_100k_45_to_65_all_ethnicity_genders_2005_2007") %>% 
+  st_set_crs(value = 3310)
+class(hd_2007) # check data type
+st_crs(hd_2007) # check projection
+
+# heart disease death rate 2014-2016
+hd_2016 <- st_read(dsn=geoDB, layer = "cardio_death_rate_per_100k_45_to_65_all_ethnicity_genders_2014_2016") %>% 
+  st_set_crs(value = 3310)
+
+# % living in poverty
+pov <- st_read(dsn=geoDB, "percentage_living_in_poverty_all_ages_2106") %>%
+  st_set_crs(value=3310)
+
+# from hrbrmstr/albersusa
 comp_map <- albersusa::counties_sf() %>% st_transform(3310)
-st_crs(comp_map)
-
 
 # Join Data ---------------------------------------------------------------
 
+# join the hd data with the county map data
 hd_out <- left_join(comp_map, as.data.frame(hd_2016), by=c("fips"="cnty_fips"))
 
+# join poverty data
 pov_out <- left_join(comp_map, as.data.frame(pov), by=c("fips"="cnty_fips"))
 
 # Make Plot of Heart Disease ----------------------------------------
@@ -66,9 +102,7 @@ by_pal <- RColorBrewer::brewer.pal(n = 9, name = "Reds")
     theme(legend.position = "bottom")
 )
 
-ggsave("figs/cardiovasc_death_2014-16_45-64_all_gender.png", width = 9.5, height = 6, dpi = 300, units = "in")
-
-
+#ggsave("figs/cardiovasc_death_2014-16_45-64_all_gender.png", width = 9.5, height = 6, dpi = 300, units = "in")
 
 # Make Plot of Poverty ----------------------------------------------------
 
@@ -99,12 +133,14 @@ ggsave("figs/cardiovasc_death_2014-16_45-64_all_gender.png", width = 9.5, height
    theme(legend.position = "bottom")
 )
 
-ggsave("figs/percent_living_in_poverty_2016.png", width = 9.5, height = 6, dpi = 300, units = "in")
+#ggsave("figs/percent_living_in_poverty_2016.png", width = 9.5, height = 6, dpi = 300, units = "in")
 
 
 # Combine -----------------------------------------------------------------
 
 library(cowplot)
 
+# combine plots
 plots <- plot_grid(cd_2016, pov_map, nrow = 1)
-cowplot::save_plot(plots, filename = "figs/poverty_vs_heart_disease_2016.png", base_width = 11, base_height =  8.5, dpi = 300, units = "in")
+
+#cowplot::save_plot(plots, filename = "figs/poverty_vs_heart_disease_2016.png", base_width = 11, base_height =  8.5, dpi = 300, units = "in")
